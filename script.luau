@@ -1,4 +1,3 @@
-task.wait(math.random(5, 7))
 
 local globalenv = getgenv and getgenv() or _G or shared
 if globalenv and (globalenv.MDH_BB and not globalenv.MDH_DEBUG) then
@@ -281,5 +280,5 @@ end
 if LocalPlayer.Character then
 	AttachToLocalCharacter(LocalPlayer.Character)
 end
-
+task.wait(math.random(5, 7))
 LocalPlayer.CharacterAdded:Connect(AttachToLocalCharacter)
