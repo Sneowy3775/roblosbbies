@@ -37,7 +37,7 @@ end
 local Settings = {
     Breast = true,
     BreastSize = 1,  -- scale 0 to ~3
-    Cheeks = false,
+    Cheeks = true,
     CheeksSize = 1,  -- scale 0 to ~3
     Collisions = false,
     Simulate_Physics_On_LocalPlayer_Only = true,
@@ -99,33 +99,26 @@ end
 
 local function ApplyRig(Model, R6)
 	local NewModel = FemaleRig:Clone()
-	local NewParts = {
-		Torso = NewModel.T.Torso,
-		RightLeg = NewModel.R["Right Leg"],
-		LeftLeg = NewModel.L["Left Leg"],
-	}
+
 	local Parts = {}
 	if R6 then
-		Parts.Torso = "Torso"
-		Parts.RightLeg = "Right Leg"
-		Parts.LeftLeg = "Left Leg"
+		Parts.Torso = Model:WaitForChild("Torso", math.huge)
+		Parts.RightLeg = Model:WaitForChild("Right Leg", math.huge)
+		Parts.LeftLeg = Model:WaitForChild("Left Leg", math.huge)
 	else
-		Parts.Torso = "UpperTorso"
-		Parts.RightLeg = "RightUpperLeg"
-		Parts.LeftLeg = "LeftUpperLeg"
+		Parts.Torso = Model:WaitForChild("UpperTorso", math.huge)
+		Parts.RightLeg = Model:WaitForChild("RightUpperLeg", math.huge)
+		Parts.LeftLeg = Model:WaitForChild("LeftUpperLeg", math.huge)
 	end
 
-	Parts.Torso = Model:WaitForChild(Parts.Torso, math.huge)
-	Parts.RightLeg = Model:WaitForChild(Parts.RightLeg, math.huge)
-	Parts.LeftLeg = Model:WaitForChild(Parts.LeftLeg, math.huge)
+	-- Color the new rig legs to match original legs
+	NewModel.R.Color = Parts.RightLeg.Color
+	NewModel.L.Color = Parts.LeftLeg.Color
 
-	-- Match colors of breasts parts to torso color
-	NewParts.Torso.Part.BRSTVisual.Color = Parts.Torso.Color
-
-	-- Scale breasts only, no cheeks
-	if Settings.Breast and NewParts.Torso.Part and NewParts.Torso.Part.BRSTVisual then
+	-- Scale breasts and cheeks on the NEW torso rig (but keep torso hidden)
+	if Settings.Breast and NewModel.T.Torso.Part and NewModel.T.Torso.Part.BRSTVisual then
 		local scale = math.clamp(Settings.BreastSize, 0, 3)
-		local brstVisual = NewParts.Torso.Part.BRSTVisual
+		local brstVisual = NewModel.T.Torso.Part.BRSTVisual
 		if brstVisual:IsA("MeshPart") then
 			brstVisual.Size = Vector3.new(1, 1, 1) * scale
 		else
@@ -139,34 +132,76 @@ local function ApplyRig(Model, R6)
 		brstVisual.Transparency = (scale == 0 and 1 or 0)
 	end
 
-	-- Remove butt cheeks entirely, don't even weld them
-	if NewParts.Torso:FindFirstChild("Model") then
-		if NewParts.Torso.Model:FindFirstChild("RightCHK") then
-			NewParts.Torso.Model.RightCHK:Destroy()
+	if Settings.Cheeks then
+		local scaleCheeks = math.clamp(Settings.CheeksSize, 0, 3)
+		local function scalePart(part)
+			if part then
+				if part:IsA("MeshPart") then
+					part.Size = Vector3.new(1, 1, 1) * scaleCheeks
+				else
+					local mesh = part:FindFirstChildWhichIsA("SpecialMesh") or part:FindFirstChildWhichIsA("Mesh")
+					if mesh then
+						mesh.Scale = Vector3.new(1, 1, 1) * scaleCheeks
+					else
+						part.Size = Vector3.new(1, 1, 1) * scaleCheeks
+					end
+				end
+				part.Transparency = (scaleCheeks == 0 and 1 or 0)
+			end
 		end
-		if NewParts.Torso.Model:FindFirstChild("LeftCHK") then
-			NewParts.Torso.Model.LeftCHK:Destroy()
+		if NewModel.T.Torso:FindFirstChild("Model") then
+			scalePart(NewModel.T.Torso.Model:FindFirstChild("RightCHK"))
+			scalePart(NewModel.T.Torso.Model:FindFirstChild("LeftCHK"))
 		end
 	end
 
-	-- Weld breasts parts to the original torso
-	for _, part in ipairs(NewParts.Torso:GetDescendants()) do
+	-- Hide the new torso rig's torso (we keep original torso visible)
+	NewModel.T.Torso.Transparency = 1
+
+	-- Weld custom breasts/cheeks parts to original torso
+	for _, part in ipairs(NewModel.T.Torso:GetDescendants()) do
 		if part:IsA("BasePart") and part.Name ~= "Torso" then
 			Weld(part, Parts.Torso)
 		end
 	end
 
-	-- Keep original torso visible
-	Parts.Torso.Transparency = 0
+	-- Weld new legs to original legs
+	for _, legPart in ipairs(NewModel.R:GetChildren()) do
+		if legPart:IsA("BasePart") then
+			Weld(legPart, Parts.RightLeg)
+		end
+	end
+	for _, legPart in ipairs(NewModel.L:GetChildren()) do
+		if legPart:IsA("BasePart") then
+			Weld(legPart, Parts.LeftLeg)
+		end
+	end
 
-	-- Add missing joints needed for jiggle physics
-	NewParts.BJJ = NewModel.T.Torso:FindFirstChild("BUJ") and NewModel.T.Torso.BUJ:FindFirstChild("BJJ")
-	NewParts.BJ = NewModel.T.Torso:FindFirstChild("BTJ") and NewModel.T.Torso.BTJ:FindFirstChild("BJ")
+	-- Keep original torso and legs visible
+	Parts.Torso.Transparency = 0
+	Parts.RightLeg.Transparency = 0
+	Parts.LeftLeg.Transparency = 0
+
+	-- Joints for jiggle physics come from the NEW torso rig (breasts/cheeks)
+	local BJJ = nil
+	local BJ = nil
+	if NewModel.T.Torso:FindFirstChild("BUJ") then
+		BJJ = NewModel.T.Torso.BUJ:FindFirstChild("BJJ")
+	end
+	if NewModel.T.Torso:FindFirstChild("BTJ") then
+		BJ = NewModel.T.Torso.BTJ:FindFirstChild("BJ")
+	end
 
 	Protect(NewModel)
-	NewModel.Parent = nil -- Don't add custom torso rig to model
+	NewModel.Parent = nil -- keep rig invisible and not parented
 
-	return NewParts
+	return {
+		Torso = Parts.Torso,
+		RightLeg = Parts.RightLeg,
+		LeftLeg = Parts.LeftLeg,
+		BJJ = BJJ,
+		BJ = BJ,
+	}
 end
 
 local RunService = game:GetService("RunService")
@@ -182,8 +217,9 @@ local function JigglePhysics(NewParts)
 	local Torso = NewParts.Torso
 	local A = NewParts.BJ
 	local SJ = NewParts.BJJ
+
 	if not A or not SJ then
-		warn("Jiggle joints missing, skipping jiggle physics")
+		warn("Missing jiggle joints, skipping jiggle physics")
 		return
 	end
 
