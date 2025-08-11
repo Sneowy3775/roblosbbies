@@ -37,8 +37,8 @@ end
 local Settings = {
     Breast = true,
     BreastSize = 1,  -- scale 0 to ~3
-    Cheeks = true,
-    CheeksSize = 1,  -- scale 0 to ~3
+    Cheeks = false,  -- turned off per request
+    CheeksSize = 1,  -- ignored now
     Collisions = false,
     Simulate_Physics_On_LocalPlayer_Only = true,
     ForceAllRigs = false,
@@ -119,10 +119,10 @@ local function ApplyRig(Model, R6)
 	Parts.RightLeg = Model:WaitForChild(Parts.RightLeg, math.huge)
 	Parts.LeftLeg = Model:WaitForChild(Parts.LeftLeg, math.huge)
 
-	-- Match colors of breasts parts to torso color
+	-- Match breasts color to torso
 	NewParts.Torso.Part.BRSTVisual.Color = Parts.Torso.Color
 
-	-- Scale breasts only, no cheeks
+	-- Scale breasts only, no cheeks (cheeks disabled)
 	if Settings.Breast and NewParts.Torso.Part and NewParts.Torso.Part.BRSTVisual then
 		local scale = math.clamp(Settings.BreastSize, 0, 3)
 		local brstVisual = NewParts.Torso.Part.BRSTVisual
@@ -139,7 +139,7 @@ local function ApplyRig(Model, R6)
 		brstVisual.Transparency = (scale == 0 and 1 or 0)
 	end
 
-	-- Remove butt cheeks entirely, don't even weld them
+	-- Remove butt cheeks if somehow present
 	if NewParts.Torso:FindFirstChild("Model") then
 		if NewParts.Torso.Model:FindFirstChild("RightCHK") then
 			NewParts.Torso.Model.RightCHK:Destroy()
@@ -149,7 +149,7 @@ local function ApplyRig(Model, R6)
 		end
 	end
 
-	-- Don't parent or weld any torso parts — just weld boobs to original torso
+	-- Weld boob parts only to original torso (don't parent torso rig)
 	for _, part in ipairs(NewParts.Torso:GetDescendants()) do
 		if part:IsA("BasePart") and part.Name ~= "Torso" then
 			Weld(part, Parts.Torso)
@@ -160,7 +160,7 @@ local function ApplyRig(Model, R6)
 	Parts.Torso.Transparency = 0
 
 	Protect(NewModel)
-	NewModel.Parent = nil -- Don't add custom torso rig to model
+	NewModel.Parent = nil -- Don't parent custom torso rig
 
 	return NewParts
 end
