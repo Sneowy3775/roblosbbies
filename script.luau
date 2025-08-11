@@ -138,7 +138,7 @@ local function ApplyRig(Model, R6)
 				brstVisual.Size = Vector3.new(1, 1, 1) * scale
 			end
 		end
-		brstVisual.Transparency = (scale == 0 and 1 or 0)
+		brstVisual.Transparency = 0 -- breasts visible
 	end
 
 	if Settings.Cheeks then
@@ -155,7 +155,7 @@ local function ApplyRig(Model, R6)
 						part.Size = Vector3.new(1, 1, 1) * scaleCheeks
 					end
 				end
-				part.Transparency = (scaleCheeks == 0 and 1 or 0)
+				part.Transparency = 1 -- cheeks transparent
 			end
 		end
 		scalePart(NewParts.Torso.Model.RightCHK)
@@ -183,7 +183,14 @@ local function ApplyRig(Model, R6)
 
 	for name, part in next, NewParts do
 		Weld(part, Parts[name])
-		Parts[name].Transparency = 1
+		if name == "RightLeg" or name == "LeftLeg" then
+			Parts[name].Transparency = 0 -- legs visible
+		elseif name == "Torso" then
+			Parts[name].Transparency = 0 -- original torso visible
+			part.Transparency = 1 -- new rig torso transparent
+		else
+			Parts[name].Transparency = 0 -- breasts visible
+		end
 	end
 
 	NewParts.BJJ = NewParts.Torso.Torso.BUJ.BJJ
