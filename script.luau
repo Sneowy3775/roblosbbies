@@ -280,5 +280,4 @@ end
 if LocalPlayer.Character then
 	AttachToLocalCharacter(LocalPlayer.Character)
 end
-task.wait(math.random(5, 7))
 LocalPlayer.CharacterAdded:Connect(AttachToLocalCharacter)
