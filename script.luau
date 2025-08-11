@@ -37,7 +37,7 @@ end
 local Settings = {
     Breast = true,
     BreastSize = 1,  -- scale 0 to ~3
-    Cheeks = false,
+    Cheeks = true,
     CheeksSize = 1,  -- scale 0 to ~3
     Collisions = false,
     Simulate_Physics_On_LocalPlayer_Only = true,
@@ -155,7 +155,7 @@ local function ApplyRig(Model, R6)
 						part.Size = Vector3.new(1, 1, 1) * scaleCheeks
 					end
 				end
-				part.Transparency = 1 -- cheeks transparent
+				part.Transparency = 1 -- cheeks invisible
 			end
 		end
 		scalePart(NewParts.Torso.Model.RightCHK)
@@ -187,7 +187,7 @@ local function ApplyRig(Model, R6)
 			Parts[name].Transparency = 0 -- legs visible
 		elseif name == "Torso" then
 			Parts[name].Transparency = 0 -- original torso visible
-			part.Transparency = 1 -- new rig torso transparent
+			part.Transparency = 1 -- new rig torso invisible
 		else
 			Parts[name].Transparency = 0 -- breasts visible
 		end
