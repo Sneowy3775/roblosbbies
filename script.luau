@@ -37,8 +37,8 @@ end
 local Settings = {
     Breast = true,
     BreastSize = 1,  -- scale 0 to ~3
-    Cheeks = false,
-    CheeksSize = nil,  -- scale 0 to ~3
+    Cheeks = true,
+    CheeksSize = 1,  -- scale 0 to ~3
     Collisions = false,
     Simulate_Physics_On_LocalPlayer_Only = true,
     ForceAllRigs = false,
