@@ -36,7 +36,9 @@ end
 
 local Settings = {
     Breast = true,
-    BreastSize = 1,  
+    BreastSize = 1,  -- scale 0 to ~3
+    Cheeks = true,
+    CheeksSize = 1,  -- scale 0 to ~3
     Collisions = false,
     Simulate_Physics_On_LocalPlayer_Only = true,
     ForceAllRigs = false,
@@ -67,6 +69,7 @@ local function Protect(instance)
 	for _, desc in ipairs(instance:GetDescendants()) do
 		desc.Name = RandomString()
 	end
+
 	if globalcontainer.protgui and not (is_sirhurt_closure or (syn and DrawingImmediate)) then
 		globalcontainer.protgui(instance)
 	end
@@ -86,6 +89,7 @@ local function DressUp(Model, NewModel)
 	local Shirt, Pants = Model:FindFirstChildOfClass("Shirt"), Model:FindFirstChildOfClass("Pants")
 	Shirt = Shirt and Shirt.ShirtTemplate
 	Pants = Pants and Pants.PantsTemplate
+
 	for _, desc in ipairs(NewModel:GetDescendants()) do
 		if desc:IsA("Decal") then
 			desc.Texture = (desc.Name == "Shirt" and Shirt or desc.Name == "Pants" and Pants or "")
@@ -115,32 +119,10 @@ local function ApplyRig(Model, R6)
 	Parts.RightLeg = Model:WaitForChild(Parts.RightLeg, math.huge)
 	Parts.LeftLeg = Model:WaitForChild(Parts.LeftLeg, math.huge)
 
-	-- Match colors
-	NewParts.Torso.Color = Parts.Torso.Color
+	-- Match colors of breasts parts to torso color
 	NewParts.Torso.Part.BRSTVisual.Color = Parts.Torso.Color
-	NewParts.RightLeg.Color = Parts.RightLeg.Color
-	NewParts.LeftLeg.Color = Parts.LeftLeg.Color
 
-	-- Remove torso mesh but keep breasts
-	if NewParts.Torso:FindFirstChild("Part") then
-		for _, child in ipairs(NewParts.Torso.Part:GetChildren()) do
-			if child.Name ~= "BRSTVisual" then
-				child:Destroy()
-			end
-		end
-	end
-
-	-- Remove butt cheeks entirely
-	if NewParts.Torso:FindFirstChild("Model") then
-		if NewParts.Torso.Model:FindFirstChild("RightCHK") then
-			NewParts.Torso.Model.RightCHK:Destroy()
-		end
-		if NewParts.Torso.Model:FindFirstChild("LeftCHK") then
-			NewParts.Torso.Model.LeftCHK:Destroy()
-		end
-	end
-
-	-- Scale breasts
+	-- Scale breasts only, no cheeks
 	if Settings.Breast and NewParts.Torso.Part and NewParts.Torso.Part.BRSTVisual then
 		local scale = math.clamp(Settings.BreastSize, 0, 3)
 		local brstVisual = NewParts.Torso.Part.BRSTVisual
@@ -157,34 +139,36 @@ local function ApplyRig(Model, R6)
 		brstVisual.Transparency = (scale == 0 and 1 or 0)
 	end
 
-	NewParts.Torso = NewModel.T
-	DressUp(Model, NewModel)
-
-	Model.ChildAdded:Connect(function(child)
-		if child:IsA("Clothing") then
-			DressUp(Model, NewModel)
+	-- Remove butt cheeks entirely, don't even weld them
+	if NewParts.Torso:FindFirstChild("Model") then
+		if NewParts.Torso.Model:FindFirstChild("RightCHK") then
+			NewParts.Torso.Model.RightCHK:Destroy()
 		end
-	end)
+		if NewParts.Torso.Model:FindFirstChild("LeftCHK") then
+			NewParts.Torso.Model.LeftCHK:Destroy()
+		end
+	end
 
-	-- Weld breasts rig parts to original torso (don't replace torso)
+	-- Don't parent or weld any torso parts — just weld boobs to original torso
 	for _, part in ipairs(NewParts.Torso:GetDescendants()) do
-		if part:IsA("BasePart") then
+		if part:IsA("BasePart") and part.Name ~= "Torso" then
 			Weld(part, Parts.Torso)
 		end
 	end
 
-	Parts.Torso.Transparency = 0 -- keep original torso visible
+	-- Keep original torso visible
+	Parts.Torso.Transparency = 0
 
-	NewParts.BJJ = NewParts.Torso.Torso.BUJ.BJJ
-	NewParts.BJ = NewParts.Torso.Torso.BTJ.BJ
 	Protect(NewModel)
-	NewModel.Parent = Model
+	NewModel.Parent = nil -- Don't add custom torso rig to model
+
 	return NewParts
 end
 
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
+
 while not LocalPlayer do
 	Players.ChildAdded:Wait()
 	LocalPlayer = Players.LocalPlayer
@@ -199,6 +183,7 @@ local function JigglePhysics(NewParts)
 	local OGY = Torso.Position.Y
 
 	local breastScale = math.clamp(Settings.BreastSize, 0, 3)
+
 	local BRSTSpring = SpringClass.new()
 	BRSTSpring.Target = 5 * breastScale
 	BRSTSpring.Speed = 10
@@ -214,14 +199,17 @@ local function JigglePhysics(NewParts)
 			if LocalPlayer and LocalPlayer.Character and workspace.CurrentCamera then
 				local Camera = workspace.CurrentCamera
 				local HRP = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+
 				if HRP and (HRP.Position - Camera.CFrame.Position).Magnitude < 50 then
 					local CURRY = Torso.Position.Y
 					local Calculated = OGY - CURRY
 					OGY = CURRY
 					BRSTSpring:TimeSkip(deltatime)
 					BRSTSpring:Impulse(Calculated)
+
 					BTTSpring:TimeSkip(deltatime)
 					BTTSpring:Impulse(Calculated)
+
 					SJ.C0 = OGC0 * CFrame.new(0, -0.02 * (BRSTSpring.Velocity / 10), 0)
 						* CFrame.Angles(-10 * math.rad(BRSTSpring.Velocity), 0, 0)
 					A.C0 = OGC02 * CFrame.new(0, -0.05 * (BTTSpring.Velocity / 10), 0)
@@ -242,10 +230,13 @@ local function VerifyRigAndApply(instance, ApplyPhysics)
 					task.wait()
 				end
 			until Humanoid
+
 			if not Settings.ForceAllRigs and instance:FindFirstChild("CustomRig") then
 				return
 			end
+
 			local NewParts = ApplyRig(instance, Humanoid.RigType == Enum.HumanoidRigType.R6)
+
 			if ApplyPhysics then
 				JigglePhysics(NewParts)
 			end
