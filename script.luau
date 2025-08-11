@@ -37,7 +37,7 @@ end
 local Settings = {
     Breast = true,
     BreastSize = 1,  -- scale 0 to ~3
-    Cheeks = false,
+    Cheeks = true,
     CheeksSize = 1,  -- scale 0 to ~3
     Collisions = false,
     Simulate_Physics_On_LocalPlayer_Only = true,
@@ -184,12 +184,24 @@ local function ApplyRig(Model, R6)
 	for name, part in next, NewParts do
 		Weld(part, Parts[name])
 		if name == "RightLeg" or name == "LeftLeg" then
-			Parts[name].Transparency = 0 -- legs visible
+			Parts[name].Transparency = 0 -- original legs visible
+			part.Transparency = 1         -- new rig legs invisible
 		elseif name == "Torso" then
 			Parts[name].Transparency = 0 -- original torso visible
-			part.Transparency = 1 -- new rig torso invisible
+			part.Transparency = 1         -- new rig torso invisible
+
+			-- explicitly hide cheeks in new rig
+			if part.Model then
+				if part.Model.RightCHK then
+					part.Model.RightCHK.Transparency = 1
+				end
+				if part.Model.LeftCHK then
+					part.Model.LeftCHK.Transparency = 1
+				end
+			end
 		else
-			Parts[name].Transparency = 0 -- breasts visible
+			Parts[name].Transparency = 0 -- original breasts visible
+			part.Transparency = 0         -- new rig breasts visible
 		end
 	end
 
