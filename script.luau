@@ -166,12 +166,14 @@ local function ApplyRig(Model, R6)
 		end
 	end)
 
-	for name, part in next, NewParts do
-		if Parts[name] then
-			Weld(part, Parts[name])
-			Parts[name].Transparency = 1
+	-- Weld breasts rig parts to original torso (don't replace torso)
+	for _, part in ipairs(NewParts.Torso:GetDescendants()) do
+		if part:IsA("BasePart") then
+			Weld(part, Parts.Torso)
 		end
 	end
+
+	Parts.Torso.Transparency = 0 -- keep original torso visible
 
 	NewParts.BJJ = NewParts.Torso.Torso.BUJ.BJJ
 	NewParts.BJ = NewParts.Torso.Torso.BTJ.BJ
