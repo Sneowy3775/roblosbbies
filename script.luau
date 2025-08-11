@@ -37,8 +37,8 @@ end
 local Settings = {
     Breast = true,
     BreastSize = 1,  -- scale 0 to ~3
-    Cheeks = false,  -- turned off per request
-    CheeksSize = 1,  -- ignored now
+    Cheeks = false,
+    CheeksSize = 1,  -- scale 0 to ~3
     Collisions = false,
     Simulate_Physics_On_LocalPlayer_Only = true,
     ForceAllRigs = false,
@@ -119,10 +119,10 @@ local function ApplyRig(Model, R6)
 	Parts.RightLeg = Model:WaitForChild(Parts.RightLeg, math.huge)
 	Parts.LeftLeg = Model:WaitForChild(Parts.LeftLeg, math.huge)
 
-	-- Match breasts color to torso
+	-- Match colors of breasts parts to torso color
 	NewParts.Torso.Part.BRSTVisual.Color = Parts.Torso.Color
 
-	-- Scale breasts only, no cheeks (cheeks disabled)
+	-- Scale breasts only, no cheeks
 	if Settings.Breast and NewParts.Torso.Part and NewParts.Torso.Part.BRSTVisual then
 		local scale = math.clamp(Settings.BreastSize, 0, 3)
 		local brstVisual = NewParts.Torso.Part.BRSTVisual
@@ -139,7 +139,7 @@ local function ApplyRig(Model, R6)
 		brstVisual.Transparency = (scale == 0 and 1 or 0)
 	end
 
-	-- Remove butt cheeks if somehow present
+	-- Remove butt cheeks entirely, don't even weld them
 	if NewParts.Torso:FindFirstChild("Model") then
 		if NewParts.Torso.Model:FindFirstChild("RightCHK") then
 			NewParts.Torso.Model.RightCHK:Destroy()
@@ -149,7 +149,7 @@ local function ApplyRig(Model, R6)
 		end
 	end
 
-	-- Weld boob parts only to original torso (don't parent torso rig)
+	-- Weld breasts parts to the original torso
 	for _, part in ipairs(NewParts.Torso:GetDescendants()) do
 		if part:IsA("BasePart") and part.Name ~= "Torso" then
 			Weld(part, Parts.Torso)
@@ -159,8 +159,12 @@ local function ApplyRig(Model, R6)
 	-- Keep original torso visible
 	Parts.Torso.Transparency = 0
 
+	-- Add missing joints needed for jiggle physics
+	NewParts.BJJ = NewModel.T.Torso:FindFirstChild("BUJ") and NewModel.T.Torso.BUJ:FindFirstChild("BJJ")
+	NewParts.BJ = NewModel.T.Torso:FindFirstChild("BTJ") and NewModel.T.Torso.BTJ:FindFirstChild("BJ")
+
 	Protect(NewModel)
-	NewModel.Parent = nil -- Don't parent custom torso rig
+	NewModel.Parent = nil -- Don't add custom torso rig to model
 
 	return NewParts
 end
@@ -178,6 +182,11 @@ local function JigglePhysics(NewParts)
 	local Torso = NewParts.Torso
 	local A = NewParts.BJ
 	local SJ = NewParts.BJJ
+	if not A or not SJ then
+		warn("Jiggle joints missing, skipping jiggle physics")
+		return
+	end
+
 	local OGC0 = SJ.C0
 	local OGC02 = A.C0
 	local OGY = Torso.Position.Y
