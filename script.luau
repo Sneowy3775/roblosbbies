@@ -42,7 +42,7 @@ local Settings = {
     CheeksSize = 1,  -- scale 0 to ~3
     Collisions = false,
     Simulate_Physics_On_LocalPlayer_Only = true,
-    ForceAllRigs = true,
+    ForceAllRigs = false,
     Only_Others = false
 }
 
