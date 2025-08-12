@@ -104,58 +104,48 @@ local function ApplyRig(Model, R6)
 		RightLeg = NewModel.R["Right Leg"],
 		LeftLeg = NewModel.L["Left Leg"],
 	}
+
 	local Parts = {}
 	if R6 then
-		Parts.Torso = "Torso"
-		Parts.RightLeg = "Right Leg"
-		Parts.LeftLeg = "Left Leg"
+		Parts.Torso = Model:WaitForChild("Torso", math.huge)
+		Parts.RightLeg = Model:WaitForChild("Right Leg", math.huge)
+		Parts.LeftLeg = Model:WaitForChild("Left Leg", math.huge)
 	else
-		Parts.Torso = "UpperTorso"
-		Parts.RightLeg = "RightUpperLeg"
-		Parts.LeftLeg = "LeftUpperLeg"
+		Parts.Torso = Model:WaitForChild("UpperTorso", math.huge)
+		Parts.RightLeg = Model:WaitForChild("RightUpperLeg", math.huge)
+		Parts.LeftLeg = Model:WaitForChild("LeftUpperLeg", math.huge)
 	end
-
-	Parts.Torso = Model:WaitForChild(Parts.Torso, math.huge)
-	Parts.RightLeg = Model:WaitForChild(Parts.RightLeg, math.huge)
-	Parts.LeftLeg = Model:WaitForChild(Parts.LeftLeg, math.huge)
 
 	NewParts.Torso.Color = Parts.Torso.Color
 	NewParts.Torso.Part.BRSTVisual.Color = Parts.Torso.Color
 	NewParts.Torso.Model.RightCHK.Color = Parts.RightLeg.Color
 	NewParts.Torso.Model.LeftCHK.Color = Parts.LeftLeg.Color
 
-	-- Correct scaling using Mesh.Scale or MeshPart.Size
+	-- Scale breasts (visible)
 	if Settings.Breast and NewParts.Torso.Part and NewParts.Torso.Part.BRSTVisual then
 		local scale = math.clamp(Settings.BreastSize, 0, 3)
 		local brstVisual = NewParts.Torso.Part.BRSTVisual
-		if brstVisual:IsA("MeshPart") then
-			brstVisual.Size = Vector3.new(1, 1, 1) * scale
+		local mesh = brstVisual:FindFirstChildWhichIsA("SpecialMesh") or brstVisual:FindFirstChildWhichIsA("Mesh")
+		if mesh then
+			mesh.Scale = Vector3.new(1,1,1) * scale
 		else
-			local mesh = brstVisual:FindFirstChildWhichIsA("SpecialMesh") or brstVisual:FindFirstChildWhichIsA("Mesh")
-			if mesh then
-				mesh.Scale = Vector3.new(1, 1, 1) * scale
-			else
-				brstVisual.Size = Vector3.new(1, 1, 1) * scale
-			end
+			brstVisual.Size = Vector3.new(1,1,1) * scale
 		end
-		brstVisual.Transparency = 0 -- breasts visible
+		brstVisual.Transparency = 0
 	end
 
+	-- Scale cheeks and make them invisible
 	if Settings.Cheeks then
 		local scaleCheeks = math.clamp(Settings.CheeksSize, 0, 3)
 		local function scalePart(part)
 			if part then
-				if part:IsA("MeshPart") then
-					part.Size = Vector3.new(1, 1, 1) * scaleCheeks
+				local mesh = part:FindFirstChildWhichIsA("SpecialMesh") or part:FindFirstChildWhichIsA("Mesh")
+				if mesh then
+					mesh.Scale = Vector3.new(1,1,1) * scaleCheeks
 				else
-					local mesh = part:FindFirstChildWhichIsA("SpecialMesh") or part:FindFirstChildWhichIsA("Mesh")
-					if mesh then
-						mesh.Scale = Vector3.new(1, 1, 1) * scaleCheeks
-					else
-						part.Size = Vector3.new(1, 1, 1) * scaleCheeks
-					end
+					part.Size = Vector3.new(1,1,1) * scaleCheeks
 				end
-				part.Transparency = 1 -- cheeks transparent
+				part.Transparency = 1 -- cheeks fully transparent
 			end
 		end
 		scalePart(NewParts.Torso.Model.RightCHK)
@@ -172,7 +162,9 @@ local function ApplyRig(Model, R6)
 		NewParts.LeftLeg = nil
 	end
 
+	-- Replace torso with full new rig torso model for welding & transparency control
 	NewParts.Torso = NewModel.T
+
 	DressUp(Model, NewModel)
 
 	Model.ChildAdded:Connect(function(child)
@@ -181,15 +173,19 @@ local function ApplyRig(Model, R6)
 		end
 	end)
 
-	for name, part in next, NewParts do
-		Weld(part, Parts[name])
-		if name == "RightLeg" or name == "LeftLeg" then
-			Parts[name].Transparency = 0 -- legs visible
-		elseif name == "Torso" then
-			Parts[name].Transparency = 0 -- original torso visible
-			part.Transparency = 1 -- new rig torso transparent
-		else
-			Parts[name].Transparency = 0 -- breasts visible
+	-- Weld and set transparency
+	for name, part in pairs(NewParts) do
+		if part and Parts[name] then
+			Weld(part, Parts[name])
+			if name == "Torso" then
+				Parts[name].Transparency = 0      -- original torso visible
+				part.Transparency = 1             -- new rig torso transparent
+			elseif name == "RightLeg" or name == "LeftLeg" then
+				Parts[name].Transparency = 0     -- legs visible
+				part.Transparency = 0             -- legs visible too
+			else
+				Parts[name].Transparency = 0     -- breasts visible
+			end
 		end
 	end
 
@@ -286,6 +282,5 @@ end
 if LocalPlayer.Character then
 	AttachToLocalCharacter(LocalPlayer.Character)
 end
-
 
 LocalPlayer.CharacterAdded:Connect(AttachToLocalCharacter)
