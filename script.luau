@@ -97,61 +97,34 @@ local function DressUp(Model, NewModel)
 	end
 end
 
-local function FindPartByNameOrClass(parent, names, className)
-	for _, name in ipairs(names) do
-		local found = parent:FindFirstChild(name)
-		if found then
-			return found
-		end
-	end
-	for _, child in ipairs(parent:GetChildren()) do
-		if child.ClassName == className then
-			return child
-		end
-	end
-	return nil
-end
-
 local function ApplyRig(Model, R6)
 	local NewModel = FemaleRig:Clone()
-
-	print("NewModel children:")
-	for _, child in ipairs(NewModel:GetChildren()) do
-		print(" -", child.Name, child.ClassName)
-	end
-
-	-- Dynamically find torso and legs
-	local TorsoModel = NewModel:FindFirstChild("T") or NewModel:FindFirstChild("Torso") or NewModel
-	local RightLegModel = NewModel:FindFirstChild("R") or NewModel:FindFirstChild("RightLeg") or NewModel
-	local LeftLegModel = NewModel:FindFirstChild("L") or NewModel:FindFirstChild("LeftLeg") or NewModel
-
 	local NewParts = {
-		Torso = FindPartByNameOrClass(TorsoModel, {"Torso", "UpperTorso"}, "Model") or TorsoModel,
-		RightLeg = FindPartByNameOrClass(RightLegModel, {"Right Leg", "RightUpperLeg"}, "BasePart") or RightLegModel,
-		LeftLeg = FindPartByNameOrClass(LeftLegModel, {"Left Leg", "LeftUpperLeg"}, "BasePart") or LeftLegModel,
+		Torso = NewModel.T.Torso,
+		RightLeg = NewModel.R["Right Leg"],
+		LeftLeg = NewModel.L["Left Leg"],
 	}
-
 	local Parts = {}
 	if R6 then
-		Parts.Torso = Model:WaitForChild("Torso", math.huge)
-		Parts.RightLeg = Model:WaitForChild("Right Leg", math.huge)
-		Parts.LeftLeg = Model:WaitForChild("Left Leg", math.huge)
+		Parts.Torso = "Torso"
+		Parts.RightLeg = "Right Leg"
+		Parts.LeftLeg = "Left Leg"
 	else
-		Parts.Torso = Model:WaitForChild("UpperTorso", math.huge)
-		Parts.RightLeg = Model:WaitForChild("RightUpperLeg", math.huge)
-		Parts.LeftLeg = Model:WaitForChild("LeftUpperLeg", math.huge)
+		Parts.Torso = "UpperTorso"
+		Parts.RightLeg = "RightUpperLeg"
+		Parts.LeftLeg = "LeftUpperLeg"
 	end
+
+	Parts.Torso = Model:WaitForChild(Parts.Torso, math.huge)
+	Parts.RightLeg = Model:WaitForChild(Parts.RightLeg, math.huge)
+	Parts.LeftLeg = Model:WaitForChild(Parts.LeftLeg, math.huge)
 
 	NewParts.Torso.Color = Parts.Torso.Color
-	if NewParts.Torso.Part and NewParts.Torso.Part.BRSTVisual then
-		NewParts.Torso.Part.BRSTVisual.Color = Parts.Torso.Color
-	end
-	if NewParts.Torso.Model then
-		NewParts.Torso.Model.RightCHK.Color = Parts.RightLeg.Color
-		NewParts.Torso.Model.LeftCHK.Color = Parts.LeftLeg.Color
-	end
+	NewParts.Torso.Part.BRSTVisual.Color = Parts.Torso.Color
+	NewParts.Torso.Model.RightCHK.Color = Parts.RightLeg.Color
+	NewParts.Torso.Model.LeftCHK.Color = Parts.LeftLeg.Color
 
-	-- Scaling breasts
+	-- Correct scaling using Mesh.Scale or MeshPart.Size
 	if Settings.Breast and NewParts.Torso.Part and NewParts.Torso.Part.BRSTVisual then
 		local scale = math.clamp(Settings.BreastSize, 0, 3)
 		local brstVisual = NewParts.Torso.Part.BRSTVisual
@@ -168,7 +141,6 @@ local function ApplyRig(Model, R6)
 		brstVisual.Transparency = 0 -- breasts visible
 	end
 
-	-- Scaling cheeks
 	if Settings.Cheeks then
 		local scaleCheeks = math.clamp(Settings.CheeksSize, 0, 3)
 		local function scalePart(part)
@@ -183,13 +155,11 @@ local function ApplyRig(Model, R6)
 						part.Size = Vector3.new(1, 1, 1) * scaleCheeks
 					end
 				end
-				part.Transparency = 1 -- cheeks invisible
+				part.Transparency = 1 -- cheeks transparent
 			end
 		end
-		if NewParts.Torso.Model then
-			scalePart(NewParts.Torso.Model.RightCHK)
-			scalePart(NewParts.Torso.Model.LeftCHK)
-		end
+		scalePart(NewParts.Torso.Model.RightCHK)
+		scalePart(NewParts.Torso.Model.LeftCHK)
 	end
 
 	if R6 then
@@ -202,7 +172,7 @@ local function ApplyRig(Model, R6)
 		NewParts.LeftLeg = nil
 	end
 
-	NewParts.Torso = NewModel.T or NewParts.Torso
+	NewParts.Torso = NewModel.T
 	DressUp(Model, NewModel)
 
 	Model.ChildAdded:Connect(function(child)
@@ -214,22 +184,12 @@ local function ApplyRig(Model, R6)
 	for name, part in next, NewParts do
 		Weld(part, Parts[name])
 		if name == "RightLeg" or name == "LeftLeg" then
-			Parts[name].Transparency = 0 -- original legs visible
-			part.Transparency = 1         -- new rig legs invisible
+			Parts[name].Transparency = 0 -- legs visible
 		elseif name == "Torso" then
 			Parts[name].Transparency = 0 -- original torso visible
-			part.Transparency = 1         -- new rig torso invisible
-			if part.Model then
-				if part.Model.RightCHK then
-					part.Model.RightCHK.Transparency = 1
-				end
-				if part.Model.LeftCHK then
-					part.Model.LeftCHK.Transparency = 1
-				end
-			end
+			part.Transparency = 1 -- new rig torso transparent
 		else
-			Parts[name].Transparency = 0 -- original breasts visible
-			part.Transparency = 0         -- new rig breasts visible
+			Parts[name].Transparency = 0 -- breasts visible
 		end
 	end
 
@@ -326,4 +286,6 @@ end
 if LocalPlayer.Character then
 	AttachToLocalCharacter(LocalPlayer.Character)
 end
+
+
 LocalPlayer.CharacterAdded:Connect(AttachToLocalCharacter)
